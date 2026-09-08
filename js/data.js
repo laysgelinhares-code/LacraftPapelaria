@@ -299,6 +299,50 @@ const SEED_CUSTOM_PRICES = [
 const SEED_COSTS = { papel: 38, tinta: 22, lamina: 6, energia: 4, mao: 28, embalagem: 3 };
 const METAS = { mensal: 10000, semanal: 2500, diaria: 400 };
 
+/* ---------------- calculadora de precos (planilha de orcamento) ---------------- */
+const round2 = (x) => Math.round((Number(x) || 0) * 100) / 100;
+const pct = (v) => String(v || 0).replace('.', ',');
+const PRECO_PARAMS = {
+  cvhora: 10,          // Custo Fixo por Hora (R$)
+  markup: 1.0,         // Expectativa de Lucro (100% = dobra o custo)
+  tx_plataforma: 0.01, // Taxa da Plataforma (%)
+  tx_cartao: 0.1768,   // Taxa do Cartao na venda (%)
+  cfixo_mensal: 1858,  // Custo fixo mensal (MEI+Energia+Internet+Agua / salario,13,FGTS,Ferias / aluguel)
+  horas_mes: 60,       // Horas trabalhadas declaradas no mes
+};
+const calcCorpPreco = (cv, tempoH, ps) => {
+  const cf = (ps.cvhora || 0) * tempoH;
+  const ct = cv + cf;
+  const comLucro = ct * (1 + (ps.markup || 0));
+  const sugerido = round2(comLucro * (1 + (ps.tx_plataforma || 0)));
+  return { cf: round2(cf), ct: round2(ct), comLucro: round2(comLucro), sugerido };
+};
+const margemPct = (venda, ct) => (venda > 0 ? round2(((venda - ct) / venda) * 100) : 0);
+const cartaoPct = (valor, tx) => round2(valor * (1 + (Number(tx) || 0)));
+const SEED_PRECO = [
+  { sku: '#25010002', nome: 'Caderno A6 80f em branco',   cv: 5.21,  tempoH: 0.17, venda: 15.00 },
+  { sku: '#25010003', nome: 'Caderno A5 80f pautado PB',  cv: 11.36, tempoH: 1,    venda: 33.00 },
+  { sku: '#25010004', nome: 'Caderneta de vacina nova',   cv: 11.62, tempoH: 1,    venda: 50.00 },
+  { sku: '#25010005', nome: 'Caderneta reforma',          cv: 8.86,  tempoH: 0.5,  venda: 35.00 },
+  { sku: '#25010006', nome: 'Agenda 2DPP',                cv: 18.42, tempoH: 1,    venda: 65.00 },
+  { sku: '#25010007', nome: 'Agenda 1DPP',                cv: 21.84, tempoH: 1,    venda: 75.00 },
+  { sku: '#25010008', nome: 'Caderno A5 80f decorado',    cv: 12.43, tempoH: 1,    venda: 40.00 },
+  { sku: '#25010009', nome: 'Devocional PB 110f',         cv: 12.82, tempoH: 1,    venda: 49.90 },
+  { sku: '#25010010', nome: 'Caderninho A6 grampeado',    cv: 0.86,  tempoH: 0.17, venda: 4.00 },
+  { sku: '#25010011', nome: 'Bloquinho espiral capa mole',cv: 3.31,  tempoH: 0.17, venda: 8.00 },
+  { sku: '#25010012', nome: 'Bloco colado A6 50f',        cv: 2.95,  tempoH: 0.17, venda: 7.50 },
+  { sku: '#25010013', nome: 'Folha adesiva gloss c/ corte',cv: 1.44, tempoH: 0.08, venda: 7.50 },
+  { sku: '#25010014', nome: 'Folha adesiva gloss s/ corte',cv: 0.94, tempoH: 0.02, venda: 5.00 },
+  { sku: '#25010015', nome: 'Devocional PB 113f',         cv: 18.23, tempoH: 1,    venda: 50.00 },
+  { sku: '#25010016', nome: 'Reforma capa de biblia',     cv: 10.30, tempoH: 2,    venda: 50.00 },
+  { sku: '#25010017', nome: 'Agenda miolo Lionmix',       cv: 24.35, tempoH: 1,    venda: 75.00 },
+  { sku: '#25010018', nome: 'Marca pagina retangular',    cv: 0.29,  tempoH: 0.08, venda: 4.00 },
+  { sku: '#25010019', nome: 'Photocard',                  cv: 0.20,  tempoH: 0.08, venda: 4.00 },
+  { sku: '#25010020', nome: 'Cone coracao',               cv: 9.98,  tempoH: 0.17, venda: 25.00 },
+  { sku: '#25010021', nome: 'Cone simples',               cv: 2.35,  tempoH: 0.17, venda: 10.00 },
+  { sku: '#25010022', nome: 'Produto novo (sem nome)',    cv: 7.31,  tempoH: 0.5,  venda: 0.00 },
+];
+
 /* ---------------- admin ---------------- */
 const DEFAULT_ACESSOS = ['dashboard', 'pedidos', 'clientes', 'agenda', 'perfil'];
 const ALL_MODULES = [

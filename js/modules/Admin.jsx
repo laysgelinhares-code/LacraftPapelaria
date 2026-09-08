@@ -81,7 +81,7 @@ const AdminView = () => {
     reader.onload = () => {
       try {
         const obj = JSON.parse(reader.result);
-        const allowed = ['orders', 'clients', 'products', 'stock', 'tx', 'costs', 'metas', 'users', 'customPrices', 'planner', 'legendas', 'reels', 'arts', 'diary', 'ideas'];
+        const allowed = ['orders', 'clients', 'products', 'stock', 'tx', 'costs', 'metas', 'users', 'customPrices', 'planner', 'legendas', 'reels', 'arts', 'diary', 'ideas', 'preco', 'precoParams'];
         const clean = {};
         allowed.forEach((k) => { if (obj[k]) clean[k] = obj[k]; });
         Object.keys(clean).forEach((k) => set(k, clean[k]));

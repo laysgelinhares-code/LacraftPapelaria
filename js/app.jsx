@@ -96,6 +96,8 @@ const SEED_STATE = () => ({
   customPrices: SEED_CUSTOM_PRICES,
   costs: SEED_COSTS,
   metas: METAS,
+  precoParams: PRECO_PARAMS,
+  preco: SEED_PRECO,
   users: SEED_USERS,
   activity: SEED_ACTIVITY,
   movs: [],
