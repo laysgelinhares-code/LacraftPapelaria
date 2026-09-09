@@ -489,8 +489,7 @@ const Sidebar = ({ tab, go, unreadLate, open, onClose, onLogout }) => {
                   onClick={() => (it.action === 'logout' ? onLogout() : (go(it.k), onClose()))}>
                   <Icon name={it.icon} size={18} />
                   <span>{it.label}</span>
-                  {!it.action && counts[it.k] ? <span className={`count ${tone[it.k]}`}>{counts[it.k]}</span> : null}
-                  {it.k === 'pedidos' && !it.action && unreadLate > 0 ? <span className="count">{unreadLate}</span> : null}
+                  {!it.action && counts[it.k] ? <span className={`count ${tone[it.k]}`} title={it.k === 'pedidos' ? `${counts[it.k]} pedidos em produção` : it.k === 'estoque' ? `${counts[it.k]} insumos abaixo do mínimo` : ''}>{counts[it.k]}</span> : null}
                 </button>
               ))}
             </div>
