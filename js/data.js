@@ -307,13 +307,13 @@ const fileToDataUrl = (file, cb) => {
   rd.onload = () => {
     const im = new Image();
     im.onload = () => {
-      const max = 900;
+      const max = 640;
       const sc = Math.min(1, max / Math.max(im.width || 1, im.height || 1));
       const cv = document.createElement('canvas');
       cv.width = Math.round(im.width * sc);
       cv.height = Math.round(im.height * sc);
       cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
-      cb(cv.toDataURL('image/jpeg', 0.82));
+      cb(cv.toDataURL('image/jpeg', 0.75));
     };
     im.src = rd.result;
   };

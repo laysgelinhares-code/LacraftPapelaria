@@ -95,7 +95,7 @@ const Textarea = (props) => <textarea className="textarea" {...props}></textarea
 const SearchInput = ({ value, onChange, placeholder = 'Buscar...' }) => (
   <div className="search-row" style={{ width: '100%', maxWidth: 280 }}>
     <Icon name="search" />
-    <input className="input" value={value} onChange={onChange} placeholder={placeholder} />
+    <input className="input" value={value} onChange={onChange} placeholder={placeholder} autoComplete="off" data-form-type="other" data-lpignore="true" spellCheck="false" autocapitalize="off" />
   </div>
 );
 const Progress = ({ value = 0, max = 100, tone = '' }) => {

@@ -110,6 +110,9 @@ const SEED_STATE = () => ({
 const LS_KEY = 'lacraft_os_state_v1';
 const ZERO_GEN_KEY = 'lacraft_os_gen';
 const SESSION_KEY = 'lacraft_session';
+const SYNC_URL = '/api/state';
+const SYNC_SECRET = '';
+const SYNC_META_KEY = 'lacraft_sync_meta';
 let GEN = Number(localStorage.getItem(ZERO_GEN_KEY) || 0);
 
 const normalizeUsers = (arr) => (arr && arr.length ? arr.map((u) => ({
@@ -188,7 +191,12 @@ const LaCraftOS = () => {
           toast('Espaço de armazenamento cheio — remova fotos grandes para continuar salvando', 'warn');
         } else if (e) { throw e; }
       }
+      window.clearTimeout(pushRef.current);
+      pushRef.current = window.setTimeout(() => {
+        if (Date.now() - lastPullRef.current > 2000) pushState(state);
+      }, 1500);
     }
+    return () => window.clearTimeout(pushRef.current);
   }, [state]);
   React.useEffect(() => {
     localStorage.setItem('lacraft_theme', theme);
@@ -225,8 +233,67 @@ const LaCraftOS = () => {
 
   const set = (key, fn) => setState((s) => {
     const next = typeof fn === 'function' ? fn(s[key]) : fn;
-    return { ...s, [key]: next };
+    return { ...s, [key]: next, updated: Date.now() };
   });
+
+  const stateRef = React.useRef(state);
+  stateRef.current = state;
+
+  const pushRef = React.useRef(null);
+  const lastPullRef = React.useRef(0);
+
+  const stripForSync = (s) => {
+    const r = { ...s };
+    delete r.q;
+    delete r.notifyRead;
+    delete r.printLog;
+    delete r.cutLog;
+    return r;
+  };
+
+  const dropImgs = (prods) => (prods || []).map((p) => {
+    const c = { ...p };
+    delete c.img;
+    return c;
+  });
+
+  const pushState = async (s, withoutImgs) => {
+    let blob = { ...s, updated: s.updated || Date.now() };
+    if (withoutImgs) blob = { ...blob, products: dropImgs(blob.products) };
+    blob = stripForSync(blob);
+    try {
+      const headers = { 'Content-Type': 'application/json', ...(SYNC_SECRET ? { 'x-app-secret': SYNC_SECRET } : {}) };
+      let res = await fetch(SYNC_URL, { method: 'PUT', headers, body: JSON.stringify(blob) });
+      if ((res.status === 413 || res.status === 500) && !withoutImgs) {
+        blob = stripForSync({ ...s, updated: s.updated || Date.now(), products: dropImgs(s.products) });
+        res = await fetch(SYNC_URL, { method: 'PUT', headers, body: JSON.stringify(blob) });
+      }
+      if (res.ok) localStorage.setItem(SYNC_META_KEY, JSON.stringify({ lastPush: Date.now() }));
+    } catch (e) { /* offline: segue funcionando local */ }
+  };
+
+  const pullState = async () => {
+    try {
+      const res = await fetch(SYNC_URL, { headers: { ...(SYNC_SECRET ? { 'x-app-secret': SYNC_SECRET } : {}) } });
+      if (!res.ok) return;
+      const remote = await res.json();
+      if (!remote || !remote.updated) return;
+      if (Number(remote.updated) > Number((stateRef.current || {}).updated || 0)) {
+        lastPullRef.current = Date.now();
+        const me = stateRef.current || {};
+        const merged = { ...me, ...remote, q: me.q || '', notifyRead: me.notifyRead || [] };
+        setState(merged);
+        window.setTimeout(() => toast('Sincronizado com a nuvem ✨'), 500);
+      }
+    } catch (e) { /* offline */ }
+  };
+
+  React.useEffect(() => {
+    pullState();
+    const iv = window.setInterval(() => { if (user) pullState(); }, 45000);
+    return () => window.clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const log = (msg, user = 'Lays') =>
     set('activity', (a) => [{ id: uid('AC'), data: TODAY + 'T' + new Date().toTimeString().slice(0, 8), user, msg }, ...a]);
@@ -422,7 +489,7 @@ const Topbar = ({ fold, onToggleFold }) => {
       <div className="topbar-search">
         <div className="search-box">
           <Icon name="search" size={15} />
-          <input placeholder="Buscar pedido, cliente..." value={q} onChange={(e) => setQ(e.target.value)} onFocus={() => setSel(true)} onBlur={() => setTimeout(() => setSel(false), 150)} aria-label="Buscar pedido ou cliente" />
+          <input placeholder="Buscar pedido, cliente..." value={q} onChange={(e) => setQ(e.target.value)} onFocus={() => setSel(true)} onBlur={() => setTimeout(() => setSel(false), 150)} aria-label="Buscar pedido ou cliente" autoComplete="off" data-form-type="other" data-lpignore="true" spellCheck="false" autocapitalize="off" />
         </div>
         {suggest ? (
           <div className="pop" style={{ right: 'auto', left: 0, top: 46, width: 380 }}>
