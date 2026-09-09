@@ -108,7 +108,7 @@ const NewOrderModal = ({ onClose }) => {
   const [nv, setNv] = React.useState({ nome: '', tel: '' });
   const [items, setItems] = React.useState([{ p: 'P01', qtd: 1 }]);
   const [prio, setPrio] = React.useState('normal');
-  const [prazo, setPrazo] = React.useState('2026-09-05');
+  const [prazo, setPrazo] = React.useState(plusDaysISO(5));
   const [metodo, setMetodo] = React.useState('Pix');
   const [resp, setResp] = React.useState('Lays');
   const [orig, setOrig] = React.useState('WhatsApp');

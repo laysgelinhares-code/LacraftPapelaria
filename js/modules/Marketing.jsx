@@ -9,7 +9,7 @@ const STATUS_MARK = {
 const MarketingView = () => {
   const { state, set, log, toast } = useLC();
   const [tab, setTab] = React.useState('calendario');
-  const [novaData, setNovaData] = React.useState({ data: '2026-09-08', nome: '', cor: 'coral' });
+  const [novaData, setNovaData] = React.useState({ data: todayISO(), nome: '', cor: 'coral' });
   const [novaPost, setNovaPost] = React.useState({ semana: '', tema: '', tipo: 'Reel', status: 'ideia' });
   const [legenda, setLegenda] = React.useState('');
   const [reel, setReel] = React.useState('');
@@ -20,7 +20,7 @@ const MarketingView = () => {
     set('comemorativas', (a) => [...a, { data: novaData.data, nome: novaData.nome, cor: novaData.cor }]);
     log(`Nova data comemorativa: ${novaData.nome}`);
     toast('Data adicionada ao calendário 🎉');
-    setNovaData({ data: '2026-09-08', nome: '', cor: 'coral' });
+    setNovaData({ data: todayISO(), nome: '', cor: 'coral' });
   };
   const addPost = () => {
     if (!novaPost.tema) { toast('Informe o tema', 'warn'); return; }

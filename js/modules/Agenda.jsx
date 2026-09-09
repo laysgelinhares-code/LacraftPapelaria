@@ -6,7 +6,7 @@ const dayISO = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
 
 const AgendaView = () => {
   const { state, saveOrder, set, log, toast } = useLC();
-  const [ym, setYm] = React.useState({ y: 2026, m: 8 });
+  const [ym, setYm] = React.useState(() => { const t = new Date(); return { y: t.getFullYear(), m: t.getMonth() + 1 }; });
   const [sel, setSel] = React.useState(null);
   const Y = ym.y, M = ym.m;
   const firstDow = new Date(Y + '-' + pad(M) + '-01T12:00:00').getDay();
@@ -45,7 +45,7 @@ const AgendaView = () => {
         <span className="stat-pill"><Icon name="truck" /> {state.orders.filter((o) => o.status !== 'entregue' && o.prazo && o.prazo >= TODAY).length} entregas futuras</span>
         <span className="grow" />
         <Btn sm onClick={() => nav(-1)}><Icon name="left" size={14} /></Btn>
-        <Btn sm onClick={() => setYm({ y: 2026, m: 8 })}>Hoje</Btn>
+        <Btn sm onClick={() => { const t = new Date(); setYm({ y: t.getFullYear(), m: t.getMonth() + 1 }); }}>Hoje</Btn>
         <Btn sm onClick={() => nav(1)}><Icon name="right" size={14} /></Btn>
       </div>
 
