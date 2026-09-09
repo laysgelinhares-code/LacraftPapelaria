@@ -113,7 +113,7 @@ const ClientesView = () => {
   const filt = state.clients.filter((c) => !q || (c.nome + ' ' + (c.cidade || '') + ' ' + (c.instagram || '') + ' ' + (c.tel || '')).toLowerCase().includes(q.toLowerCase().trim()));
 
   const save = (f) => {
-    if (form) {
+    if (form && form.id) {
       set('clients', (a) => a.map((c) => (c.id === form.id ? { ...c, ...f } : c)));
       log(`Cliente atualizada: ${f.nome}`);
       toast('Cliente atualizada');

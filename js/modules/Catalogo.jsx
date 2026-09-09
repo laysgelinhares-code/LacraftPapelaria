@@ -2,7 +2,7 @@
 // LA CRAFT OS — Catálogo de Produtos
 // ============================================================
 
-const ProductDrawer = ({ p, onClose, onEdit }) => {
+const ProductDrawer = ({ p, onClose, onEdit, onDelete }) => {
   const { state, saveOrder, go } = useLC();
   const ordered = state.orders.filter((o) => o.items.some((i) => i.p === p.id));
   const totalUn = ordered.reduce((s, o) => s + o.items.filter((i) => i.p === p.id).reduce((a, i) => a + i.qtd, 0), 0);
@@ -11,6 +11,7 @@ const ProductDrawer = ({ p, onClose, onEdit }) => {
   const calc = cv ? calcCorpPreco(cv, n(p.tempoH), pp) : null;
   const mg = p.valor && calc ? margemPct(n(p.valor), calc.ct) : null;
   const low = p.valor && calc && n(p.valor) < calc.sugerido;
+  const insumos = p.ficha?.length ? p.ficha : (p.materiais || []);
   return (
     <Drawer title={p.nome} subtitle={EMOJI_BY_CAT[p.categoria] + ' ' + CATEGORIAS.find(([k]) => k === p.categoria)?.[1]} onClose={onClose}>
       <div className="art-tile" style={{ aspectRatio: '16/9' }}>
@@ -31,29 +32,31 @@ const ProductDrawer = ({ p, onClose, onEdit }) => {
         ) : null}
       </div>
       <p className="mt12">{p.desc}</p>
-      {p.materiais?.length ? (
+      {insumos.length ? (
         <div className="mt12">
           <SectionHead title="Insumos utilizados" sub="baixa automática no estoque" />
           <div style={{ display: 'grid', gap: 6 }}>
-            {p.materiais.map((m, k) => {
+            {insumos.map((m, k) => {
               const st = state.stock.find((x) => x.id === m.i);
               return <div key={k} className="list-row"><span className="badge warn">{m.q}</span><b className="small grow">{st?.nome || m.i}</b><span className="muted tiny">{st ? `${st.qtd} ${st.un} restantes` : ''}</span></div>;
             })}
           </div>
         </div>
       ) : null}
-      {p.categoria === 'empresa' ? <div className="alert-banner mt12" style={{ borderColor: 'var(--teal)', background: 'var(--teal-soft)', color: 'var(--teal-dark)' }}>💼 Este item é configurado por contrato — use a Calculadora de Custos para precificar.</div> : null}
+      {p.categoria === 'empresa' ? <div className="alert-banner mt12" style={{ borderColor: 'var(--teal)', background: 'var(--teal-soft)', color: 'var(--teal-dark)' }}>💼 Este item é configurado por contrato — ajuste os preços no Orçamento Inteligente.</div> : null}
       <div className="mt16 flex gap8 wrap">
         <Btn variant="primary" onClick={() => { window.__preSelProduct = p.id; go('pedidos'); onClose(); toast('Produto pré-selecionado no novo pedido'); }}><Icon name="plus" /> Novo pedido com este produto</Btn>
         <Btn onClick={() => { go('orcamento'); onClose(); }}><Icon name="orcamento" /> Orçar agora</Btn>
         <Btn onClick={onEdit}><Icon name="edit" /> Editar produto</Btn>
+        <Btn className="danger-ghost" onClick={() => { if (window.confirm(`Excluir ${p.nome} do catálogo?`)) onDelete(); }}><Icon name="trash" size={13} /> Excluir</Btn>
       </div>
     </Drawer>
   );
 };
 
 const CatalystForm = ({ onSave, initial, onClose }) => {
-  const [f, setF] = React.useState(initial ? { ...initial, img: initial.img || '' } : { categoria: 'agenda', nome: '', desc: '', valor: '', tempo: 3, foto: '📦', sku: '', cv: '', tempoH: '', img: '' });
+  const { state } = useLC();
+  const [f, setF] = React.useState(initial ? { ...initial, mode: initial.mode || 'cv', cv: initial.cv || '', venda: initial.venda || '', ficha: (initial.ficha || []).map((x) => ({ ...x })), img: initial.img || '' } : { categoria: 'agenda', nome: '', desc: '', valor: '', tempo: 3, foto: '📦', sku: '', cv: '', tempoH: '', venda: '', mode: 'cv', ficha: [], img: '' });
   return (
     <Modal title={initial ? 'Editar produto' : 'Novo produto'} onClose={onClose}
       footer={<><Btn onClick={onClose}>Cancelar</Btn><Btn variant="primary" onClick={() => { if (!f.nome || !f.valor) { toast('Preencha nome e preço', 'warn'); return; } onSave({ ...f, valor: n(f.valor), cv: n(f.cv), tempoH: n(f.tempoH) }); }}><Icon name="check" /> Salvar</Btn></>}>
@@ -66,10 +69,42 @@ const CatalystForm = ({ onSave, initial, onClose }) => {
         </Field>
         <Field label="Preço (R$)"><Input value={f.valor} onChange={(e) => setF({ ...f, valor: e.target.value })} /></Field>
         <Field label="Tempo médio (dias)"><Input type="number" min={0} value={f.tempo} onChange={(e) => setF({ ...f, tempo: parseInt(e.target.value) || 0 })} /></Field>
-        <Field label="SKU" hint="ex.: #25010002"><Input value={f.sku} onChange={(e) => setF({ ...f, sku: e.target.value })} /></Field>
-        <Field label="Custo variável (R$)" hint="para a calculadora de preços"><Input type="number" step="0.01" min={0} value={f.cv} onChange={(e) => setF({ ...f, cv: e.target.value })} /></Field>
+        <Field label="SKU" hint="ex.: #25010002 — gerado se vazio"><Input value={f.sku} onChange={(e) => setF({ ...f, sku: e.target.value })} /></Field>
         <Field label="Tempo de produção (h)" hint="usado no cálculo de custo fixo"><Input type="number" step="0.01" min={0} value={f.tempoH} onChange={(e) => setF({ ...f, tempoH: e.target.value })} /></Field>
         <Field label="Ícone" hint="para quando não houver foto"><Input value={f.foto} style={{ width: 90 }} onChange={(e) => setF({ ...f, foto: e.target.value })} /></Field>
+      </div>
+      <div className="card mt8" style={{ padding: 12 }}>
+        <div className="flex gap8 wrap" style={{ alignItems: 'center', marginBottom: 8 }}>
+          <b className="small">Custo variável</b>
+          <span className="grow" />
+          <Chip active={f.mode !== 'ficha'} onClick={() => setF({ ...f, mode: 'cv' })}>Manual</Chip>
+          <Chip active={f.mode === 'ficha'} onClick={() => setF({ ...f, mode: 'ficha' })}>Ficha técnica (insumos)</Chip>
+        </div>
+        {f.mode === 'ficha' ? (
+          <div>
+            {f.ficha.length === 0 ? <div className="muted small mb8">Selecione insumos do estoque — eles somam o custo variável e são descontados quando o produto for pedido.</div> : null}
+            {f.ficha.map((r, i) => {
+              const st = state.stock.find((x) => x.id === r.i);
+              return (
+                <div key={i} className="flex gap8 mb8" style={{ alignItems: 'center' }}>
+                  <Select value={r.i || ''} style={{ flex: 2 }} onChange={(e) => { const rr = [...f.ficha]; rr[i] = { i: e.target.value, q: rr[i].q }; setF({ ...f, ficha: rr }); }}>
+                    <option value="">— insumo —</option>
+                    {state.stock.map((s) => <option key={s.id} value={s.id}>{s.nome} ({currency(s.custo)}/{s.un})</option>)}
+                  </Select>
+                  <Input type="number" step="0.01" min={0} value={r.q} style={{ width: 80 }} onChange={(e) => { const rr = [...f.ficha]; rr[i] = { ...rr[i], q: e.target.value }; setF({ ...f, ficha: rr }); }} />
+                  <span className="muted tiny">{st ? currency((st.custo || 0) * n(r.q)) : '—'}</span>
+                  <Btn sm onClick={() => setF({ ...f, ficha: f.ficha.filter((_, k) => k !== i) })}><Icon name="trash" size={12} /></Btn>
+                </div>
+              );
+            })}
+            <Btn sm onClick={() => setF({ ...f, ficha: [...f.ficha, { i: '', q: 1 }] })}><Icon name="plus" size={13} /> Adicionar insumo</Btn>
+            <div className="flex mt12"><span className="muted small">Custo variável (soma dos insumos)</span><span className="grow" /><b>{currency(f.ficha.reduce((s, r) => s + ((state.stock.find((x) => x.id === r.i) || {}).custo || 0) * n(r.q), 0))}</b></div>
+          </div>
+        ) : (
+          <Field label="Custo variável por unidade (R$)" hint="alimenta o Orçamento Inteligente">
+            <Input type="number" step="0.01" min={0} value={f.cv} onChange={(e) => setF({ ...f, cv: e.target.value })} />
+          </Field>
+        )}
       </div>
       <div className="mt8">
         <div className="art-tile" style={{ width: 170, height: 128, marginBottom: 8 }}>
@@ -95,7 +130,7 @@ const CatalystForm = ({ onSave, initial, onClose }) => {
 };
 
 const CatalogoView = () => {
-  const { state, set, q, setQ, log, toast } = useLC();
+  const { state, set, q, setQ, log, toast, go } = useLC();
   const [cat, setCat] = React.useState('all');
   const [view, setView] = React.useState('lista');
   const [openId, setOpenId] = React.useState(null);
@@ -108,15 +143,47 @@ const CatalogoView = () => {
   );
 
   const save = (f) => {
-    if (form) {
-      set('products', (a) => a.map((p) => (p.id === form.id ? { ...p, ...f } : p)));
+    const prev = form && form.id ? state.products.find((p) => p.id === form.id) : null;
+    const ficha = (f.ficha || []).map((x) => ({ i: x.i, q: n(x.q) }));
+    const fichaCV = ficha.reduce((s, r) => s + ((state.stock.find((x) => x.id === r.i) || {}).custo || 0) * n(r.q), 0);
+    const dados = {
+      ...f,
+      valor: n(f.valor),
+      cv: round2(f.mode === 'ficha' ? fichaCV : n(f.cv)),
+      tempoH: n(f.tempoH),
+      venda: n(f.valor),
+      mode: f.mode || 'cv',
+      ficha,
+    };
+    if (!dados.sku) dados.sku = `#${yearNow}100${String((state.preco || []).length + (state.products || []).length + 1).padStart(2, '0')}`;
+    const nomeAlvo = (prev ? prev.nome : dados.nome || '').trim().toLowerCase();
+    const precoRow = { sku: dados.sku, nome: dados.nome, cv: dados.cv, tempoH: dados.tempoH, venda: dados.valor, mode: dados.mode, ficha: dados.ficha };
+    if (form && form.id) {
+      set('products', (a) => a.map((p) => (p.id === form.id ? { ...p, ...dados } : p)));
+      set('preco', (a) => {
+        const i = a.findIndex((r) => (dados.sku && r.sku === dados.sku) || (r.nome && r.nome.trim().toLowerCase() === nomeAlvo));
+        return i >= 0 ? a.map((r, k) => (k === i ? { ...r, ...precoRow } : r)) : [...a, precoRow];
+      });
       toast('Produto atualizado');
     } else {
-      set('products', (a) => [{ ...f, id: uid('P') }, ...a]);
-      log(`Novo produto no catálogo: ${f.nome}`);
+      set('products', (a) => [{ ...dados, id: uid('P') }, ...a]);
+      set('preco', (a) => {
+        const i = a.findIndex((r) => r.sku === dados.sku || (dados.nome && r.nome && r.nome.trim().toLowerCase() === String(dados.nome).trim().toLowerCase()));
+        return i >= 0 ? a.map((r, k) => (k === i ? { ...r, ...precoRow } : r)) : [...a, precoRow];
+      });
+      log(`Novo produto no catálogo: ${dados.nome}`);
       toast('Produto adicionado ✨');
     }
     setForm(null);
+  };
+
+  const del = (p) => {
+    if (!window.confirm(`Excluir ${p.nome} do catálogo?`)) return;
+    set('products', (a) => a.filter((x) => x.id !== p.id));
+    if (p.sku) set('preco', (a) => a.filter((r) => r.sku !== p.sku));
+    log(`Produto excluído do catálogo: ${p.nome}`);
+    toast('Produto excluído');
+    setOpenId(null);
   };
 
   return (
@@ -149,7 +216,10 @@ const CatalogoView = () => {
               </div>
               <span className="badge teal no-print" style={{ whiteSpace: 'nowrap' }}><Icon name="clock" size={11} /> {p.tempo}d</span>
               <b className="font-display" style={{ fontSize: 15, textAlign: 'right' }}>{currency(p.valor)}</b>
-              <button className="btn no-print" style={{ padding: '6px 10px' }} onClick={(e) => { e.stopPropagation(); setForm(p); }}><Icon name="edit" size={13} /></button>
+              <div className="flex gap4 no-print">
+                <button className="btn" style={{ padding: '6px 10px' }} title="Editar" onClick={(e) => { e.stopPropagation(); setForm(p); }}><Icon name="edit" size={13} /></button>
+                <button className="btn danger" style={{ padding: '6px 10px' }} title="Excluir" onClick={(e) => { e.stopPropagation(); del(p); }}><Icon name="trash" size={13} /></button>
+              </div>
             </div>
           ))}
           {list.length === 0 ? <Empty emoji="📚" title="Nenhum produto aqui" sub="Adicione produtos a esta categoria pelo botão Novo produto." /> : null}
@@ -166,6 +236,10 @@ const CatalogoView = () => {
                 <b className="font-display" style={{ fontSize: 16 }}>{currency(p.valor)}</b>
                 <span className="badge teal"><Icon name="clock" size={11} /> {p.tempo} dias</span>
               </div>
+              <div className="flex gap4 no-print" style={{ marginTop: 8 }}>
+                <Btn sm onClick={(e) => { e.stopPropagation(); setForm(p); }}><Icon name="edit" size={12} /> Editar</Btn>
+                <Btn sm className="danger-ghost" onClick={(e) => { e.stopPropagation(); del(p); }}><Icon name="trash" size={12} /> Excluir</Btn>
+              </div>
             </div>
           ))}
           {list.length === 0 ? (
@@ -174,7 +248,7 @@ const CatalogoView = () => {
         </div>
       )}
 
-      {open ? <ProductDrawer p={open} onClose={() => setOpenId(null)} onEdit={() => { setForm(open); setOpenId(null); }} /> : null}
+      {open ? <ProductDrawer p={open} onClose={() => setOpenId(null)} onEdit={() => { setForm(open); setOpenId(null); }} onDelete={() => del(open)} /> : null}
       {form ? <CatalystForm initial={form.id ? state.products.find((p) => p.id === form.id) : null} onSave={save} onClose={() => setForm(null)} /> : null}
     </div>
   );

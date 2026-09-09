@@ -4,7 +4,7 @@
 // ============================================================
 
 const OrcamentoView = () => {
-  const { state, set, log, toast } = useLC();
+  const { state, set, log, toast, go } = useLC();
   const ps = state.precoParams || PRECO_PARAMS;
 
   const [pix, setPix] = React.useState(0);
@@ -46,15 +46,6 @@ const OrcamentoView = () => {
     setDirty(false);
   };
 
-  const addRow = () => {
-    const len = (state.preco || []).length + 1;
-    const sku = `#${yearNow}100${String(len).padStart(2, '0')}`;
-    set('preco', (a) => [...a, { sku, nome: '', cv: 0, tempoH: 0.5, venda: 0 }]);
-    set('products', (a) => [{ id: uid('P'), categoria: 'caderno', nome: 'Produto novo', desc: '', valor: 0, tempo: 2, foto: '📦', sku, cv: 0, tempoH: 0.5, venda: 0, mode: 'cv', ficha: [] }, ...a]);
-    setPix(state.preco.length);
-    setF({ nome: '', cv: 0, tempoH: 0.5, venda: 0, mode: 'cv', ficha: [] });
-  };
-
   const delRow = () => {
     if (!sel) return;
     if (!window.confirm(`Remover ${sel.sku} · ${sel.nome || 'sem nome'}?`)) return;
@@ -81,7 +72,7 @@ const OrcamentoView = () => {
         <span className="stat-pill"><Icon name="orcamento" /> Calculadora de preços (planilha)</span>
         <span className="stat-pill"><Icon name="spark" /> custo variável + hora + lucro + taxas</span>
         <span className="grow" />
-        <Btn onClick={addRow}><Icon name="plus" /> Novo produto</Btn>
+        <Btn onClick={() => go('catalogo')}><Icon name="plus" /> Produto do catálogo</Btn>
         {sel ? <Btn onClick={delRow}><Icon name="trash" size={14} /> Remover</Btn> : null}
       </div>
 

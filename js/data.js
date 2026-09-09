@@ -379,7 +379,7 @@ const ALL_MODULES = [
   ['dashboard', 'Dashboard'], ['pedidos', 'Pedidos'], ['clientes', 'Clientes'], ['producao', 'Produção'],
   ['financeiro', 'Financeiro'], ['agenda', 'Agenda'], ['central', 'Central da La Craft'],
   ['marketing', 'Marketing'], ['biblioteca', 'Biblioteca de Artes'], ['relatorios', 'Relatórios'],
-  ['custos', 'Calculadora de Custos'], ['orcamento', 'Orçamento Inteligente'], ['catalogo', 'Catálogo de Produtos'],
+  ['orcamento', 'Orçamento Inteligente'], ['catalogo', 'Catálogo de Produtos'],
   ['estoque', 'Estoque de Insumos'], ['impressao', 'Impressão'], ['silhouette', 'Corte Silhouette'],
   ['perfil', 'Perfil'], ['configuracoes', 'Configurações'], ['backup', 'Backup'],
 ];

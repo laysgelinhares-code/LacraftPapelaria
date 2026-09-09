@@ -24,7 +24,6 @@ const NAV = [
   {
     t: 'Análises', items: [
       { k: 'relatorios', label: 'Relatórios', icon: 'relatorios' },
-      { k: 'custos', label: 'Calculadora de Custos', icon: 'custos' },
     ],
   },
   {
@@ -121,13 +120,17 @@ const normalizeUsers = (arr) => (arr && arr.length ? arr.map((u) => ({
   acessos: u.acessos || (u.papel === 'Administradora' ? '_all' : DEFAULT_ACESSOS),
 })) : arr);
 
-const syncPrecoIntoProducts = (s) => (s.preco || []).reduce((prods, r) => {
-  const ex = prods.find((p) => (p.sku && p.sku === r.sku) || (p.nome && String(p.nome).trim().toLowerCase() === String(r.nome || '').trim().toLowerCase()));
-  if (ex) {
-    return prods.map((p) => (p.id === ex.id ? { ...p, sku: r.sku, cv: n(r.cv), tempoH: n(r.tempoH), venda: n(r.venda), mode: r.mode || 'cv', ficha: (r.ficha || []).map((x) => ({ ...x })) } : p));
-  }
-  return [{ id: uid('P'), categoria: 'caderno', nome: r.nome || 'Produto novo', desc: '', valor: n(r.venda), tempo: 2, foto: '📦', sku: r.sku, cv: n(r.cv), tempoH: n(r.tempoH), venda: n(r.venda), mode: r.mode || 'cv', ficha: (r.ficha || []).map((x) => ({ ...x })) }, ...prods];
-}, (s.products || []).map((p) => ({ ...p })));
+const syncPrecoIntoProducts = (s) => {
+  const base = (s.products || []).map((p) => ({ ...p }));
+  (s.preco || []).forEach((r) => {
+    const ex = base.find((p) => (p.sku && p.sku === r.sku) || (p.nome && String(p.nome).trim().toLowerCase() === String(r.nome || '').trim().toLowerCase()));
+    if (ex) {
+      const idx = base.indexOf(ex);
+      base[idx] = { ...ex, sku: r.sku, cv: n(r.cv), tempoH: n(r.tempoH), venda: n(r.venda), valor: n(r.venda) > 0 ? n(r.venda) : ex.valor, mode: r.mode || 'cv', ficha: (r.ficha || []).map((x) => ({ ...x })) };
+    }
+  });
+  return base;
+};
 
 const loadState = () => {
   try {
@@ -323,12 +326,13 @@ const LaCraftOS = () => {
   const prodName = (pid) => (state.products.find((p) => p.id === pid) || {}).nome || pid;
   const prodLabel = (o) => o.items.map((i) => `${i.qtd}x ${prodName(i.p)}`).join(' + ');
 
-  const consumeStock = (order) => {
-    order.items.forEach((it) => {
+  const consumeStock = (items) => {
+    (items || []).forEach((it) => {
       const prod = state.products.find((p) => p.id === it.p);
-      (prod?.materiais || []).forEach((mat) => {
+      const ins = prod?.ficha?.length ? prod.ficha : (prod?.materiais || []);
+      ins.forEach((mat) => {
         set('stock', (arr) => arr.map((st) =>
-          st.id === mat.i ? { ...st, qtd: Math.max(0, n(st.qtd) - n(mat.q) * it.qtd) } : st
+          st.id === mat.i ? { ...st, qtd: Math.max(0, n(st.qtd) - n(mat.q) * (it.qtd || 1)) } : st
         ));
       });
     });
@@ -352,7 +356,6 @@ const LaCraftOS = () => {
           toast(`${next.id} pago · ${currency(next.total)} 💰`);
           log(`Pagamento recebido · ${prodLabel(next)} (${next.id})`);
         }
-        if (from < 3 && to >= 3) consumeStock(next);
         if (to === statusIdx('entregue')) toast(`${next.id} entregue com sucesso 🎉`);
       }
       log(`Status: ${sideName}`);
@@ -384,7 +387,7 @@ const LaCraftOS = () => {
     theme, toggleTheme: () => setTheme((t) => (t === 'light' ? 'dark' : 'light')),
     tab, go,
     menuOpen, setMenuOpen,
-    saveOrder, prodName, prodLabel, log, toast,
+    saveOrder, prodName, prodLabel, consumeOrderStock: consumeStock, log, toast,
     clientName, clientById,
     notifications, notifyOpen, setNotifyOpen,
     newOrderOpen, setNewOrderOpen,
@@ -567,7 +570,6 @@ const RenderTab = ({ tab }) => {
     case 'silhouette': return React.createElement(SilhouetteView);
     case 'agenda': return React.createElement(AgendaView);
     case 'financeiro': return React.createElement(FinanceiroView);
-    case 'custos': return React.createElement(CustosView);
     case 'relatorios': return React.createElement(RelatoriosView);
     case 'marketing': return React.createElement(MarketingView);
     case 'biblioteca': return React.createElement(BibliotecaView);

@@ -102,7 +102,7 @@ const Kanban = () => {
 
 /* ---------- new order modal ---------- */
 const NewOrderModal = ({ onClose }) => {
-  const { state, set, saveOrder, log, prodName } = useLC();
+  const { state, set, saveOrder, log, prodName, consumeOrderStock } = useLC();
   const [cid, setCid] = React.useState('');
   const [newCl, setNewCl] = React.useState(false);
   const [nv, setNv] = React.useState({ nome: '', tel: '' });
@@ -144,6 +144,7 @@ const NewOrderModal = ({ onClose }) => {
       sinal: 0, metodo, responsavel: resp, orig, arte: arte.filter((x) => x.nome), notas,
       timer: { acc: 0, start: null },
     }, ...a]);
+    consumeOrderStock(cleanItems);
     log(`Novo pedido criado: ${id}`);
     toast(`${id} criado · ${currency(total)} ✨`);
     if (nv.tel) { window.open(waLink(nv.tel, `Olá! Este é o seu orçamento exclusivo da La Craft 💌 valor ${currency(total)}.`), '_blank'); }
