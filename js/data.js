@@ -302,6 +302,23 @@ const METAS = { mensal: 10000, semanal: 2500, diaria: 400 };
 /* ---------------- calculadora de precos (planilha de orcamento) ---------------- */
 const round2 = (x) => Math.round((Number(x) || 0) * 100) / 100;
 const pct = (v) => String(v || 0).replace('.', ',');
+const fileToDataUrl = (file, cb) => {
+  const rd = new FileReader();
+  rd.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      const max = 900;
+      const sc = Math.min(1, max / Math.max(im.width || 1, im.height || 1));
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(im.width * sc);
+      cv.height = Math.round(im.height * sc);
+      cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+      cb(cv.toDataURL('image/jpeg', 0.82));
+    };
+    im.src = rd.result;
+  };
+  rd.readAsDataURL(file);
+};
 const PRECO_PARAMS = {
   cvhora: 10,          // Custo Fixo por Hora (R$)
   markup: 1.0,         // Expectativa de Lucro (100% = dobra o custo)
@@ -319,6 +336,19 @@ const calcCorpPreco = (cv, tempoH, ps) => {
 };
 const margemPct = (venda, ct) => (venda > 0 ? round2(((venda - ct) / venda) * 100) : 0);
 const cartaoPct = (valor, tx) => round2(valor * (1 + (Number(tx) || 0)));
+const precoRow = (state, p) => (state.preco || []).find((r) =>
+  (p && p.sku && r.sku && String(r.sku).trim().toLowerCase() === String(p.sku).trim().toLowerCase()) ||
+  (p && p.nome && r.nome && String(r.nome).trim().toLowerCase() === String(p.nome).trim().toLowerCase()));
+const planPrice = (state, p) => {
+  if (!p) return 0;
+  const r = precoRow(state, p);
+  if (r) {
+    if (n(r.venda) > 0) return n(r.venda);
+    const c = calcCorpPreco(n(r.cv), n(r.tempoH), state.precoParams || PRECO_PARAMS);
+    if (c.sugerido > 0) return c.sugerido;
+  }
+  return n(p.valor);
+};
 const SEED_PRECO = [
   { sku: '#25010002', nome: 'Caderno A6 80f em branco',   cv: 5.21,  tempoH: 0.17, venda: 15.00 },
   { sku: '#25010003', nome: 'Caderno A5 80f pautado PB',  cv: 11.36, tempoH: 1,    venda: 33.00 },

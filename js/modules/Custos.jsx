@@ -29,11 +29,14 @@ const CustosView = () => {
     toast('Configuração salva ✓');
   };
 
-  const sugestoes = state.products.filter((p) => p.valor > 0).map((p) => {
-    const c = total + custoItem;
-    const sug = c * 1.82;
-    return { p, c, sug };
-  }).sort((a, b) => b.sug - a.sug);
+  const ps = state.precoParams || PRECO_PARAMS;
+  const check = (state.preco || []).map((r) => {
+    const c = calcCorpPreco(n(r.cv), n(r.tempoH), ps);
+    const v = n(r.venda);
+    const m = v > 0 ? margemPct(v, c.ct) : 0;
+    const low = v > 0 && v < c.sugerido;
+    return { r, c, v, m, low };
+  }).sort((a, b) => b.c.sugerido - a.c.sugerido);
 
   return (
     <div>
@@ -88,14 +91,16 @@ const CustosView = () => {
           </div>
 
           <div className="card mt16">
-            <SectionHead title="Check-up do catálogo" sub="preço atual vs. sugerido (~1,82x)" />
+            <SectionHead title="Check-up da planilha" sub="mesmos preços e fórmula do Orçamento Inteligente">
+              <Badge tone="info">{check.length} itens</Badge>
+            </SectionHead>
             <div style={{ display: 'grid', gap: 8, maxHeight: 300, overflowY: 'auto' }}>
-              {sugestoes.map(({ p, sug }, i) => (
-                <div key={p.id} className="flex gap8" style={{ fontSize: 12.5 }}>
-                  <b className="grow">{p.foto} {p.nome}</b>
-                  {p.valor < sug ? <Badge tone="danger">abaixo</Badge> : <Badge tone="ok">ok</Badge>}
-                  <span className="muted tiny">atual {currency(p.valor)}</span>
-                  <b>{currency(sug)}</b>
+              {check.map(({ r, c, v, m, low }) => (
+                <div key={r.sku} className="flex gap8" style={{ fontSize: 12.5 }}>
+                  <b className="grow">{r.nome || r.sku}</b>
+                  {m > 0 ? <Badge tone={low ? 'danger' : m < 45 ? 'warn' : 'ok'}>{pct(m)}%</Badge> : <Badge tone="nude">sem preço</Badge>}
+                  {low ? <span className="badge danger" title="vendendo abaixo do sugerido">⚠️</span> : null}
+                  <span className="muted tiny">vendendo {currency(v) || '—'} · sugerido {currency(c.sugerido)}</span>
                 </div>
               ))}
             </div>

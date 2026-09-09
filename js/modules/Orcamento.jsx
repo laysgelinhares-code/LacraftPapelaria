@@ -32,7 +32,9 @@ const OrcamentoView = () => {
 
   const saveProd = () => {
     if (!f.nome) { toast('Dê um nome ao produto', 'warn'); return; }
-    set('preco', (a) => a.map((r) => (r.sku === (sel || {}).sku ? { ...r, nome: f.nome, cv: (f.mode === 'ficha' ? round2(cvFicha) : n(f.cv)), tempoH: n(f.tempoH), venda: n(f.venda), mode: f.mode, ficha: f.ficha } : r)));
+    const novoCV = f.mode === 'ficha' ? round2(cvFicha) : n(f.cv);
+    set('preco', (a) => a.map((r) => (r.sku === (sel || {}).sku ? { ...r, nome: f.nome, cv: novoCV, tempoH: n(f.tempoH), venda: n(f.venda), mode: f.mode, ficha: f.ficha } : r)));
+    set('products', (a) => a.map((p) => (p.sku === (sel || {}).sku ? { ...p, nome: f.nome, cv: novoCV, tempoH: n(f.tempoH), venda: n(f.venda), valor: n(f.venda) > 0 ? n(f.venda) : p.valor, mode: f.mode, ficha: f.ficha } : p)));
     log(`Preço atualizado: ${f.nome} (${currency(calc.sugerido)})`);
     toast('Preço salvo ✓');
   };
@@ -46,7 +48,9 @@ const OrcamentoView = () => {
 
   const addRow = () => {
     const len = (state.preco || []).length + 1;
-    set('preco', (a) => [...a, { sku: `#${yearNow}100${String(len).padStart(2, '0')}`, nome: '', cv: 0, tempoH: 0.5, venda: 0 }]);
+    const sku = `#${yearNow}100${String(len).padStart(2, '0')}`;
+    set('preco', (a) => [...a, { sku, nome: '', cv: 0, tempoH: 0.5, venda: 0 }]);
+    set('products', (a) => [{ id: uid('P'), categoria: 'caderno', nome: 'Produto novo', desc: '', valor: 0, tempo: 2, foto: '📦', sku, cv: 0, tempoH: 0.5, venda: 0, mode: 'cv', ficha: [] }, ...a]);
     setPix(state.preco.length);
     setF({ nome: '', cv: 0, tempoH: 0.5, venda: 0, mode: 'cv', ficha: [] });
   };
@@ -56,6 +60,7 @@ const OrcamentoView = () => {
     if (!window.confirm(`Remover ${sel.sku} · ${sel.nome || 'sem nome'}?`)) return;
     let idx = pix;
     set('preco', (a) => a.filter((r) => r.sku !== sel.sku));
+    set('products', (a) => a.filter((p) => p.sku !== sel.sku));
     idx = Math.min(idx, state.preco.length - 2);
     if (idx < 0) idx = 0;
     pick(idx);

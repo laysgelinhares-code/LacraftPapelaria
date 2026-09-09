@@ -125,7 +125,7 @@ const NewOrderModal = ({ onClose }) => {
 
   const total = items.reduce((s, i) => {
     const p = state.products.find((x) => x.id === i.p);
-    return s + (p ? p.valor * Math.max(1, i.qtd) : 0);
+    return s + (p ? planPrice(state, p) * Math.max(1, i.qtd) : 0);
   }, 0);
 
   const addItem = () => setItems((a) => [...a, { p: 'P01', qtd: 1 }]);
@@ -137,7 +137,7 @@ const NewOrderModal = ({ onClose }) => {
       : cid;
     if (!clientId || items.length === 0) { toast('Escolha cliente e pelo menos 1 produto', 'warn'); return; }
     const id = nextOrderId(state.orders);
-    const cleanItems = items.map((i) => { const p = state.products.find((x) => x.id === i.p); return { p: i.p, qtd: i.qtd, valor: (p ? p.valor : 0) * i.qtd }; });
+    const cleanItems = items.map((i) => { const p = state.products.find((x) => x.id === i.p); return { p: i.p, qtd: i.qtd, valor: (p ? planPrice(state, p) : 0) * i.qtd }; });
     set('orders', (a) => [{
       id, cliente: clientId, items: cleanItems, total,
       status: 'orcamento', prioridade: prio, prazo, abertura: TODAY,
@@ -177,7 +177,7 @@ const NewOrderModal = ({ onClose }) => {
                 <div key={k} className="flex gap8">
                   <div className="grow">
                     <Select value={it.p} onChange={(e) => setItem(k, { p: e.target.value })}>
-                      {state.products.map((p) => <option key={p.id} value={p.id}>{EMOJI_BY_CAT[p.categoria]} {p.nome} — {currency(p.valor)}</option>)}
+                      {state.products.map((p) => <option key={p.id} value={p.id}>{EMOJI_BY_CAT[p.categoria] || '📦'} {p.nome} — {currency(planPrice(state, p))}</option>)}
                     </Select>
                   </div>
                   <Input type="number" min={1} value={it.qtd} style={{ width: 70 }} onChange={(e) => setItem(k, { qtd: parseInt(e.target.value) || 1 })} />

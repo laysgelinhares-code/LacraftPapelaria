@@ -118,17 +118,27 @@ const normalizeUsers = (arr) => (arr && arr.length ? arr.map((u) => ({
   acessos: u.acessos || (u.papel === 'Administradora' ? '_all' : DEFAULT_ACESSOS),
 })) : arr);
 
+const syncPrecoIntoProducts = (s) => (s.preco || []).reduce((prods, r) => {
+  const ex = prods.find((p) => (p.sku && p.sku === r.sku) || (p.nome && String(p.nome).trim().toLowerCase() === String(r.nome || '').trim().toLowerCase()));
+  if (ex) {
+    return prods.map((p) => (p.id === ex.id ? { ...p, sku: r.sku, cv: n(r.cv), tempoH: n(r.tempoH), venda: n(r.venda), mode: r.mode || 'cv', ficha: (r.ficha || []).map((x) => ({ ...x })) } : p));
+  }
+  return [{ id: uid('P'), categoria: 'caderno', nome: r.nome || 'Produto novo', desc: '', valor: n(r.venda), tempo: 2, foto: '📦', sku: r.sku, cv: n(r.cv), tempoH: n(r.tempoH), venda: n(r.venda), mode: r.mode || 'cv', ficha: (r.ficha || []).map((x) => ({ ...x })) }, ...prods];
+}, (s.products || []).map((p) => ({ ...p })));
+
 const loadState = () => {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (raw) {
       const s = { ...SEED_STATE(), ...JSON.parse(raw) };
       s.users = normalizeUsers(s.users);
+      s.products = syncPrecoIntoProducts(s);
       return s;
     }
   } catch (e) { }
   const s = SEED_STATE();
   s.users = normalizeUsers(s.users);
+  s.products = syncPrecoIntoProducts(s);
   return s;
 };
 
@@ -155,16 +165,29 @@ const LaCraftOS = () => {
   });
   const ORIG_HASH = location.hash || '';
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [fold, setFold] = React.useState(() => localStorage.getItem('lacraft_os_sidefold') === '1');
   const [now, setNow] = React.useState(new Date());
   const [notifyOpen, setNotifyOpen] = React.useState(false);
   const [newOrderOpen, setNewOrderOpen] = React.useState(false);
+
+  const toggleFold = () => setFold((v) => {
+    const nv = !v;
+    localStorage.setItem('lacraft_os_sidefold', nv ? '1' : '0');
+    return nv;
+  });
 
   window.__clients = state.clients;
   window.__products = state.products;
 
   React.useEffect(() => {
     if (Number(localStorage.getItem(ZERO_GEN_KEY) || 0) === GEN) {
-      localStorage.setItem(LS_KEY, JSON.stringify(state));
+      try {
+        localStorage.setItem(LS_KEY, JSON.stringify(state));
+      } catch (e) {
+        if (e && (e.name === 'QuotaExceededError' || e.code === 22)) {
+          toast('Espaço de armazenamento cheio — remova fotos grandes para continuar salvando', 'warn');
+        } else if (e) { throw e; }
+      }
     }
   }, [state]);
   React.useEffect(() => {
@@ -317,11 +340,11 @@ const LaCraftOS = () => {
 
   return (
     <LC.Provider value={ctx}>
-      <div className="app">
+      <div className={'app' + (fold ? ' fold' : '')}>
         <Sidebar tab={tab} go={go} unreadLate={unread.length} open={menuOpen} onClose={() => setMenuOpen(false)} onLogout={logout} />
         {menuOpen ? <div className="nav-overlay no-print" onClick={() => setMenuOpen(false)} /> : null}
         <div className="main">
-          <Topbar />
+          <Topbar fold={fold} onToggleFold={toggleFold} />
           <div className="content">
             <RenderTab tab={tab} />
           </div>
@@ -361,6 +384,7 @@ const Sidebar = ({ tab, go, unreadLate, open, onClose, onLogout }) => {
               {items.map((it) => (
                 <button key={it.k} type="button" className={`nav-item ${!it.action && tab === it.k ? 'active' : ''} ${it.action ? 'is-action' : ''}`}
                   aria-current={!it.action && tab === it.k ? 'page' : undefined}
+                  title={it.label}
                   onClick={() => (it.action === 'logout' ? onLogout() : (go(it.k), onClose()))}>
                   <Icon name={it.icon} size={18} />
                   <span>{it.label}</span>
@@ -378,7 +402,7 @@ const Sidebar = ({ tab, go, unreadLate, open, onClose, onLogout }) => {
 };
 
 /* ---------- topbar ---------- */
-const Topbar = () => {
+const Topbar = ({ fold, onToggleFold }) => {
   const { tab, theme, toggleTheme, notifications, notifyOpen, setNotifyOpen, markRead, state, q, setQ, go, clientById, setMenuOpen, user } = useLC();
   const [sel, setSel] = React.useState(null);
   const d = new Date(TODAY + 'T12:00:00');
@@ -388,6 +412,7 @@ const Topbar = () => {
   return (
     <header className="topbar no-print">
       <div className="topbar-left">
+        <button className="icon-btn fold-btn" onClick={onToggleFold} title={fold ? 'Expandir menu lateral' : 'Recolher menu lateral'} aria-label="Recolher ou expandir o menu lateral"><Icon name="menu" /></button>
         <button className="icon-btn burger" onClick={() => setMenuOpen(true)} aria-label="Abrir menu"><Icon name="menu" /></button>
         <div className="tb-title">
           {navTitle(tab)}
