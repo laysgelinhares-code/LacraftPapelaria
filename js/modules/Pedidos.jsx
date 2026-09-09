@@ -35,7 +35,7 @@ const nextOrderId = (orders) => {
 
 /* ---------- order card ---------- */
 const OrderCard = ({ o }) => {
-  const { state } = useLC();
+  const { state, delOrder } = useLC();
   const st = STATUSES.find((s) => s.key === o.status);
   const late = o.status !== 'entregue' && o.prazo && o.prazo < TODAY;
   const donePct = stepProgress(o);
@@ -47,8 +47,11 @@ const OrderCard = ({ o }) => {
       <div className="k-top">
         <span className="k-id">{o.id}</span>
         <span className="pri-dot" style={{ background: o.prioridade === 'alta' ? 'var(--coral)' : 'var(--muted-2)' }} title={o.prioridade === 'alta' ? 'Prioridade alta' : 'Prioridade normal'} />
-        <span className="right" style={{ display: 'flex', gap: 4 }}>
+        <span className="right" style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
           {o.orig ? <span className="badge nude">{o.orig}</span> : null}
+          <button type="button" title="Excluir pedido" className="card-x" onClick={(e) => { e.stopPropagation(); delOrder(o.id); }}>
+            <Icon name="x" size={13} />
+          </button>
         </span>
       </div>
       <div className="k-name">{o.items.map((i) => prodName(i.p)).join(' · ')}</div>
@@ -77,7 +80,7 @@ const Kanban = () => {
   const [dragOver, setDragOver] = React.useState(null);
   return (
     <div className="kanban">
-      {STATUSES.map((st) => {
+      {STATUSES.filter((st) => st.key !== 'entregue').map((st) => {
         const cards = state.orders.filter((o) => o.status === st.key && (!state.q || (o.id + clientName(o.cliente) + o.items.map((i) => prodName(i.p))).toLowerCase().includes(state.q.toLowerCase().trim())));
         return (
           <div key={st.key} className={`kcol ${dragOver === st.key ? 'drag' : ''}`}
@@ -229,7 +232,7 @@ const NewOrderModal = ({ onClose }) => {
 
 /* ---------- detail drawer ---------- */
 const OrderDrawer = ({ o, onClose }) => {
-  const { state, saveOrder, log, now, go } = useLC();
+  const { state, saveOrder, delOrder, log, now, go } = useLC();
   const client = clientById(o.cliente);
   const st = STATUSES.find((s) => s.key === o.status);
   const idx = statusIdx(o.status);
@@ -255,6 +258,7 @@ const OrderDrawer = ({ o, onClose }) => {
     <Drawer title={o.id} subtitle={`${st ? st.label : ''} · aberto em ${fmtDate(o.abertura)}`} onClose={onClose} wide
       footer={
         <>
+          <Btn variant="ghost" className="danger" onClick={() => { delOrder(o.id); onClose(); }}><Icon name="x" size={14} /> Excluir</Btn>
           {idx > 0 ? <Btn variant="ghost" onClick={() => advance(-1)}><Icon name="left" /> Etapa anterior</Btn> : null}
           <a className="btn primary" href={client ? waLink(client.tel, waOrderMsg(o)) : '#'} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}><Icon name="wa" size={15} /> Responder no WhatsApp</a>
           {idx < STATUSES.length - 1 ? <Btn variant="coral" onClick={() => advance(1)}><Icon name="right" /> Avançar etapa</Btn> : null}
@@ -361,8 +365,9 @@ const OrderDrawer = ({ o, onClose }) => {
 
 /* ---------- main view ---------- */
 const PedidosView = () => {
-  const { state, newOrderOpen, setNewOrderOpen } = useLC();
+  const { state, newOrderOpen, setNewOrderOpen, delOrder } = useLC();
   const [openId, setOpenId] = React.useState(null);
+  const [view, setView] = React.useState('kanban');
 
   React.useEffect(() => {
     const h = (e) => setOpenId(e.detail.id);
@@ -374,7 +379,7 @@ const PedidosView = () => {
   const emProducao = state.orders.filter((o) => ['producao', 'impressao', 'corte', 'encadernacao', 'acabamento'].includes(o.status)).length;
   const atrasados = state.orders.filter((o) => o.status !== 'entregue' && o.prazo && o.prazo < TODAY).length;
   const prontos = state.orders.filter((o) => o.status === 'pronto').length;
-  const entregues = state.orders.filter((o) => o.status === 'entregue').length;
+  const finalizados = state.orders.filter((o) => o.status === 'entregue').sort((a, b) => ((b.finalizadoEm || b.prazo) > (a.finalizadoEm || a.prazo) ? 1 : -1));
 
   return (
     <div>
@@ -382,15 +387,44 @@ const PedidosView = () => {
         <span className="stat-pill"><Icon name="producao" /> Em produção: <b>{emProducao}</b></span>
         <span className="stat-pill"><Icon name="alert" style={{ color: 'var(--danger)' }} /> Atrasados: <b style={{ color: 'var(--danger)' }}>{atrasados}</b></span>
         <span className="stat-pill"><Icon name="truck" /> Prontos: <b>{prontos}</b></span>
-        <span className="stat-pill"><Icon name="check" /> Entregues: <b style={{ color: 'var(--ok)' }}>{entregues}</b></span>
+        <span className="stat-pill" style={{ cursor: 'pointer' }} title="Abrir Serviço Finalizado" onClick={() => setView('finalizados')}><Icon name="check" /> Finalizados: <b style={{ color: 'var(--ok)' }}>{finalizados.length}</b></span>
         <Btn variant="primary" onClick={() => setNewOrderOpen(true)}><Icon name="plus" /> Novo Pedido</Btn>
       </div>
 
-      <div className="alert-banner mb12 no-print" style={{ display: atrasados ? undefined : 'none' }}>
-        <Icon name="alert" /> <b>{atrasados} pedido(s) atrasado(s)</b> — arraste para a frente da fila ou recombine o prazo com a cliente.
+      <div className="tabs no-print mb12">
+        <button className={`tab ${view === 'kanban' ? 'active' : ''}`} onClick={() => setView('kanban')}>Kanban</button>
+        <button className={`tab ${view === 'finalizados' ? 'active' : ''}`} onClick={() => setView('finalizados')}>Serviço Finalizado ({finalizados.length})</button>
       </div>
 
-      <Kanban />
+      {view === 'kanban' ? (
+        <>
+          <div className="alert-banner mb12 no-print" style={{ display: atrasados ? undefined : 'none' }}>
+            <Icon name="alert" /> <b>{atrasados} pedido(s) atrasado(s)</b> — arraste para a frente da fila ou recombine o prazo com a cliente.
+          </div>
+          <Kanban />
+        </>
+      ) : (
+        <div className="card">
+          <SectionHead title="Serviço Finalizado" sub="pedidos entregues — arquivo de serviços concluídos" />
+          {finalizados.length ? finalizados.map((o) => {
+            const cl = clientById(o.cliente);
+            return (
+              <div key={o.id} className="list-row mb8" style={{ cursor: 'pointer' }} onClick={() => document.dispatchEvent(new CustomEvent('lc:openorder', { detail: { id: o.id } }))}>
+                <b style={{ fontFamily: 'var(--font-display)', color: 'var(--teal-dark)' }}>{o.id}</b>
+                <div className="grow">
+                  <b>{clientName(o.cliente)}</b>
+                  <div className="muted tiny">{prodName(o.items[0].p)}{o.items.length > 1 ? ` +${o.items.length - 1} itens` : ''}</div>
+                </div>
+                <span className="muted small">✓ {fmtDate(o.finalizadoEm || o.prazo)}</span>
+                <b>{currency(o.total)}</b>
+                {cl ? <a className="btn-wa" href={waLink(cl.tel, `Olá ${cl.nome.split(' ')[0]}! Relembrando que seu ${o.id} foi entregue 💕`)} target="_blank" rel="noreferrer"><Icon name="wa" size={12} /></a> : null}
+                <button type="button" title="Excluir" className="card-x" onClick={(e) => { e.stopPropagation(); delOrder(o.id); }}><Icon name="x" size={13} /></button>
+              </div>
+            );
+          }) : <Empty emoji="✅" title="Nenhum serviço finalizado ainda" sub="Ao marcar como entregue, o pedido aparece aqui e vai para o Financeiro." />}
+        </div>
+      )}
+
       {newOrderOpen ? <NewOrderModal onClose={() => setNewOrderOpen(false)} /> : null}
       {open ? <OrderDrawer o={open} onClose={() => setOpenId(null)} /> : null}
     </div>

@@ -527,6 +527,12 @@ table.lc tbody tr:hover { background: var(--bg-soft); }
 .kcard .k-val { font-weight: 800; color: var(--ink); font-size: 12.5px; }
 .kcard .late { color: var(--danger); font-weight: 700; }
 .pri-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.card-x {
+  width: 22px; height: 22px; border: none; background: transparent; color: var(--muted);
+  border-radius: 7px; display: grid; place-items: center; cursor: pointer; flex: none;
+  transition: background .12s, color .12s;
+}
+.card-x:hover { background: var(--danger-soft); color: var(--danger); }
 
 /* ============ CALENDAR ============ */
 .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }

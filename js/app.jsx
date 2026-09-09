@@ -338,6 +338,18 @@ const LaCraftOS = () => {
     });
   };
 
+  const restoreStock = (items) => {
+    (items || []).forEach((it) => {
+      const prod = state.products.find((p) => p.id === it.p);
+      const ins = prod?.ficha?.length ? prod.ficha : (prod?.materiais || []);
+      ins.forEach((mat) => {
+        set('stock', (arr) => arr.map((st) =>
+          st.id === mat.i ? { ...st, qtd: n(st.qtd) + n(mat.q) * (it.qtd || 1) } : st
+        ));
+      });
+    });
+  };
+
   const saveOrder = (id, patch) => {
     const o = state.orders.find((x) => x.id === id);
     if (!o) return;
@@ -346,12 +358,15 @@ const LaCraftOS = () => {
     if (patch.status && patch.status !== o.status) {
       const from = statusIdx(o.status), to = statusIdx(patch.status);
       sideName = `${next.id} → ${STATUSES[to].label}`;
+      if (to === statusIdx('entregue')) next.finalizadoEm = TODAY;
       if (to > from) {
-        if (from < 2 && to >= 2 && !o.sinal) {
+        const hasTx = state.tx.some((t) => typeof t.desc === 'string' && t.desc.indexOf(`${next.id} ·`) === 0);
+        const shouldTx = (from < 2 && to >= 2 && !o.sinal) || (to === statusIdx('entregue') && !hasTx);
+        if (shouldTx) {
           next.sinal = next.total;
           set('tx', (t) => [{
             id: uid('TX'), tipo: 'entrada', cat: 'Cliente', meta: next.metodo || 'Pix',
-            valor: next.total, data: TODAY, desc: `${next.id} · ${prodLabel(next)}`, status: 'pago',
+            valor: next.total, data: to === statusIdx('entregue') ? next.finalizadoEm : TODAY, desc: `${next.id} · ${prodLabel(next)}`, status: 'pago',
           }, ...t]);
           toast(`${next.id} pago · ${currency(next.total)} 💰`);
           log(`Pagamento recebido · ${prodLabel(next)} (${next.id})`);
@@ -361,6 +376,17 @@ const LaCraftOS = () => {
       log(`Status: ${sideName}`);
     }
     set('orders', (arr) => arr.map((x) => (x.id === id ? next : x)));
+  };
+
+const delOrder = (id) => {
+    const o = state.orders.find((x) => x.id === id);
+    if (!o) return;
+    if (!window.confirm(`Excluir o pedido ${id} definitivamente?`)) return;
+    restoreStock(o.items);
+    set('orders', (arr) => arr.filter((x) => x.id !== id));
+    set('tx', (arr) => arr.filter((t) => !(typeof t.desc === 'string' && t.desc.indexOf(`${id} ·`) === 0)));
+    log(`Pedido excluído: ${id}`);
+    toast(`${id} excluído · insumos devolvidos ao estoque`);
   };
 
   const notifications = React.useMemo(() => buildNotifications(state), [state]);
@@ -387,7 +413,7 @@ const LaCraftOS = () => {
     theme, toggleTheme: () => setTheme((t) => (t === 'light' ? 'dark' : 'light')),
     tab, go,
     menuOpen, setMenuOpen,
-    saveOrder, prodName, prodLabel, consumeOrderStock: consumeStock, log, toast,
+    saveOrder, delOrder, prodName, prodLabel, consumeOrderStock: consumeStock, log, toast,
     clientName, clientById,
     notifications, notifyOpen, setNotifyOpen,
     newOrderOpen, setNewOrderOpen,
