@@ -47,6 +47,9 @@ const STATUSES = [
 ];
 const statusIdx = (key) => STATUSES.findIndex((s) => s.key === key);
 
+const IN_PROD = ['pago', 'producao', 'impressao', 'corte', 'encadernacao', 'acabamento'];
+const inProduction = (o) => (o ? IN_PROD.includes(o.status) : false);
+
 const PRODUCT_STEPS = {
   'Agenda':            ['Impressão','Vinco','Corte','Laminação','Montagem da capa','Furação','Wire-o','Embalagem'],
   'Caderno':           ['Impressão','Vinco','Corte','Laminação','Papelão','Encadernação','Acabamento','Embalagem'],

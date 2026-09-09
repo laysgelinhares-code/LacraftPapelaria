@@ -428,9 +428,9 @@ const LaCraftOS = () => {
 /* ---------- sidebar ---------- */
 const Sidebar = ({ tab, go, unreadLate, open, onClose, onLogout }) => {
   const { state, user, can } = useLC();
-  const openOrders = () => state.orders.filter((o) => o.status !== 'entregue').length;
+  const pedidosAtivos = () => state.orders.filter(inProduction).length;
   const lowStock = () => state.stock.filter((s) => s.qtd <= s.min).length;
-  const counts = { pedidos: openOrders(), estoque: lowStock() };
+  const counts = { pedidos: pedidosAtivos(), estoque: lowStock() };
   const tone = { pedidos: 'coral', estoque: 'gold' };
   return (
     <aside className={`sidebar no-print ${open ? 'open' : ''}`} aria-label="Menu principal">

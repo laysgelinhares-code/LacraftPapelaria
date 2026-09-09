@@ -42,8 +42,7 @@ const DashboardView = () => {
   const vendidoHoje = entradas.filter((t) => t.data === TODAY).reduce((s, t) => s + t.valor, 0);
   const lucro = vendidoMes - gastoMes;
 
-  const isInProd = (o) => ['pago', 'producao', 'impressao', 'corte', 'encadernacao', 'acabamento'].includes(o.status);
-  const emProducao = state.orders.filter(isInProd).length;
+  const emProducao = state.orders.filter(inProduction).length;
   const aguardando = state.orders.filter((o) => o.status === 'aguardando').length;
   const atrasados = state.orders.filter((o) => o.status !== 'entregue' && o.prazo && o.prazo < TODAY).length;
   const prontos = state.orders.filter((o) => o.status === 'pronto').length;
