@@ -35,7 +35,7 @@ const nextOrderId = (orders) => {
 
 /* ---------- order card ---------- */
 const OrderCard = ({ o }) => {
-  const { state, delOrder } = useLC();
+  const { state, delOrder, saveOrder, toast } = useLC();
   const st = STATUSES.find((s) => s.key === o.status);
   const late = o.status !== 'entregue' && o.prazo && o.prazo < TODAY;
   const donePct = stepProgress(o);
@@ -70,6 +70,11 @@ const OrderCard = ({ o }) => {
         <Icon name="user" size={12} /> {o.responsavel}
         {st ? <span className="right" style={{ color: st.color }}>{st.label}</span> : null}
       </div>
+      {o.status === 'pronto' ? (
+        <button type="button" className="btn ok sm block mt8" onClick={(e) => { e.stopPropagation(); saveOrder(o.id, { status: 'entregue' }); toast(`${o.id} entregue · serviços finalizados 🎉`); }}>
+          <Icon name="check" size={13} /> Entregar
+        </button>
+      ) : null}
     </div>
   );
 };
@@ -232,7 +237,7 @@ const NewOrderModal = ({ onClose }) => {
 
 /* ---------- detail drawer ---------- */
 const OrderDrawer = ({ o, onClose }) => {
-  const { state, saveOrder, delOrder, log, now, go } = useLC();
+  const { state, saveOrder, delOrder, log, now, go, toast } = useLC();
   const client = clientById(o.cliente);
   const st = STATUSES.find((s) => s.key === o.status);
   const idx = statusIdx(o.status);
@@ -262,6 +267,7 @@ const OrderDrawer = ({ o, onClose }) => {
           {idx > 0 ? <Btn variant="ghost" onClick={() => advance(-1)}><Icon name="left" /> Etapa anterior</Btn> : null}
           <a className="btn primary" href={client ? waLink(client.tel, waOrderMsg(o)) : '#'} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}><Icon name="wa" size={15} /> Responder no WhatsApp</a>
           {idx < STATUSES.length - 1 ? <Btn variant="coral" onClick={() => advance(1)}><Icon name="right" /> Avançar etapa</Btn> : null}
+          {o.status === 'pronto' ? <Btn variant="ok" onClick={() => { saveOrder(o.id, { status: 'entregue' }); toast(`${o.id} entregue — serviço finalizado 🎉`); }}><Icon name="check" /> Marcar entregue</Btn> : null}
         </>
       }>
       <div className="kv">
@@ -271,6 +277,7 @@ const OrderDrawer = ({ o, onClose }) => {
         <div><div className="k">Prazo</div><div className="v sm">{fmtDateFull(o.prazo)}</div></div>
         <div><div className="k">Origem</div><div className="v sm">{o.orig}</div></div>
         <div><div className="k">Responsável</div><div className="v sm">{o.responsavel}</div></div>
+        {o.status === 'entregue' && o.finalizadoEm ? <div><div className="k">Serviço finalizado</div><div className="v sm">{fmtDateFull(o.finalizadoEm)}{o.finalizadoHora ? ` às ${o.finalizadoHora}` : ''} · {o.finalizadoPor || '—'}</div></div> : null}
       </div>
 
       <div className="flex gap12 mt16 wrap">
@@ -415,7 +422,7 @@ const PedidosView = () => {
                   <b>{clientName(o.cliente)}</b>
                   <div className="muted tiny">{prodName(o.items[0].p)}{o.items.length > 1 ? ` +${o.items.length - 1} itens` : ''}</div>
                 </div>
-                <span className="muted small">✓ {fmtDate(o.finalizadoEm || o.prazo)}</span>
+                <span className="muted small">✓ {fmtDate(o.finalizadoEm || o.prazo)}{o.finalizadoHora ? ` às ${o.finalizadoHora}` : ''}{o.finalizadoPor ? ` · ${o.finalizadoPor}` : ''}</span>
                 <b>{currency(o.total)}</b>
                 {cl ? <a className="btn-wa" href={waLink(cl.tel, `Olá ${cl.nome.split(' ')[0]}! Relembrando que seu ${o.id} foi entregue 💕`)} target="_blank" rel="noreferrer"><Icon name="wa" size={12} /></a> : null}
                 <button type="button" title="Excluir" className="card-x" onClick={(e) => { e.stopPropagation(); delOrder(o.id); }}><Icon name="x" size={13} /></button>

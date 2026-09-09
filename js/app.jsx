@@ -358,7 +358,12 @@ const LaCraftOS = () => {
     if (patch.status && patch.status !== o.status) {
       const from = statusIdx(o.status), to = statusIdx(patch.status);
       sideName = `${next.id} → ${STATUSES[to].label}`;
-      if (to === statusIdx('entregue')) next.finalizadoEm = TODAY;
+      if (to === statusIdx('entregue')) {
+        const ht = new Date();
+        next.finalizadoEm = TODAY;
+        next.finalizadoHora = `${String(ht.getHours()).padStart(2, '0')}:${String(ht.getMinutes()).padStart(2, '0')}`;
+        next.finalizadoPor = user?.nome || next.responsavel || '—';
+      }
       if (to > from) {
         const hasTx = state.tx.some((t) => typeof t.desc === 'string' && t.desc.indexOf(`${next.id} ·`) === 0);
         const shouldTx = (from < 2 && to >= 2 && !o.sinal) || (to === statusIdx('entregue') && !hasTx);
