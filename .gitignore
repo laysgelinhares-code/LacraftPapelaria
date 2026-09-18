@@ -1,0 +1,11 @@
+# segredos e arquivos locais
+vitrineai sen.txt
+*.local
+
+# repositorios embutidos / envios de terceiros
+agency-agents/
+crevideo-reach/
+.opencode/
+
+# util
+*.log

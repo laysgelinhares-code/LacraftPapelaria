@@ -16,7 +16,7 @@ const EstoqueView = () => {
   );
 
   const saveItem = (f) => {
-    if (form) {
+    if (form && form.id) {
       set('stock', (a) => a.map((s) => (s.id === form.id ? { ...s, ...f } : s)));
       toast('Insumo atualizado');
     } else {
@@ -25,6 +25,13 @@ const EstoqueView = () => {
       toast('Insumo adicionado ✨');
     }
     setForm(null);
+  };
+
+  const delItem = (s) => {
+    if (!window.confirm(`Excluir o insumo "${s.nome}" definitivamente?`)) return;
+    set('stock', (a) => a.filter((x) => x.id !== s.id));
+    log(`Insumo excluído: ${s.nome}`);
+    toast('Insumo excluído');
   };
 
   const doMove = (s, tipo, howmuch) => {
@@ -88,7 +95,11 @@ const EstoqueView = () => {
                   <td>{currency(s.custo)}</td>
                   <td className="muted small">{s.forn}</td>
                   <td>
-                    <Btn sm onClick={() => setMove(s)}><Icon name="edit" size={12} /> mover</Btn>
+                    <div className="flex gap6">
+                      <Btn sm onClick={() => setMove(s)}><Icon name="edit" size={12} /> mover</Btn>
+                      <Btn sm onClick={() => setForm(s)}>editar</Btn>
+                      <Btn sm variant="danger-ghost" onClick={() => delItem(s)} aria-label={`Excluir ${s.nome}`}><Icon name="trash" size={13} /></Btn>
+                    </div>
                   </td>
                 </tr>
               );
