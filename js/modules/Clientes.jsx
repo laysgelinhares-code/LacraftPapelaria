@@ -99,9 +99,10 @@ const ClientDrawer = ({ c, onClose }) => {
 };
 
 const ClientesView = () => {
-  const { state, set, q, setQ, log, toast } = useLC();
+  const { state, set, log, toast } = useLC();
   const [openId, setOpenId] = React.useState(null);
   const [form, setForm] = React.useState(null);
+  const [busca, setBusca] = React.useState('');
 
   React.useEffect(() => {
     const h = (e) => setOpenId(e.detail.id);
@@ -110,7 +111,7 @@ const ClientesView = () => {
   }, []);
 
   const client = state.clients.find((c) => c.id === openId);
-  const filt = state.clients.filter((c) => !q || (c.nome + ' ' + (c.cidade || '') + ' ' + (c.instagram || '') + ' ' + (c.tel || '')).toLowerCase().includes(q.toLowerCase().trim()));
+  const filt = state.clients.filter((c) => !busca || (c.nome + ' ' + (c.cidade || '') + ' ' + (c.instagram || '') + ' ' + (c.tel || '')).toLowerCase().includes(busca.toLowerCase().trim()));
 
   const save = (f) => {
     if (form && form.id) {
@@ -129,7 +130,7 @@ const ClientesView = () => {
   return (
     <div>
       <div className="flex gap10 wrap mb12 no-print">
-        <SearchInput value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar cliente..." />
+        <SearchInput value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente..." />
         <span className="grow" />
         <Btn variant="primary" onClick={() => setForm({})}><Icon name="plus" /> Nova cliente</Btn>
       </div>

@@ -130,16 +130,17 @@ const CatalystForm = ({ onSave, initial, onClose }) => {
 };
 
 const CatalogoView = () => {
-  const { state, set, q, setQ, log, toast, go } = useLC();
+  const { state, set, log, toast, go } = useLC();
   const [cat, setCat] = React.useState('all');
   const [view, setView] = React.useState('lista');
   const [openId, setOpenId] = React.useState(null);
   const [form, setForm] = React.useState(null);
+  const [busca, setBusca] = React.useState('');
   const open = state.products.find((p) => p.id === openId);
 
   const list = state.products.filter((p) =>
     (cat === 'all' || p.categoria === cat) &&
-    (!q || (p.nome + ' ' + (p.desc || '')).toLowerCase().includes(q.toLowerCase().trim()))
+    (!busca || (p.nome + ' ' + (p.desc || '')).toLowerCase().includes(busca.toLowerCase().trim()))
   );
 
   const save = (f) => {
@@ -189,7 +190,7 @@ const CatalogoView = () => {
   return (
     <div>
       <div className="flex gap10 wrap no-print mb12">
-        <SearchInput value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar produto..." />
+        <SearchInput value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar produto..." />
         <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--border)', borderRadius: 999, padding: 2, background: 'var(--bg-soft)' }}>
           <Chip active={view === 'lista'} onClick={() => setView('lista')}>☰ Lista</Chip>
           <Chip active={view === 'grid'} onClick={() => setView('grid')}>▦ Grade</Chip>

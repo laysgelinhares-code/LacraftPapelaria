@@ -103,7 +103,6 @@ const SEED_STATE = () => ({
   printLog: [],
   cutLog: [],
   notifyRead: [],
-  q: '',
 });
 
 const LS_KEY = 'lacraft_os_state_v1';
@@ -284,7 +283,7 @@ const LaCraftOS = () => {
       if (Number(remote.updated) > Number((stateRef.current || {}).updated || 0)) {
         lastPullRef.current = Date.now();
         const me = stateRef.current || {};
-        const merged = { ...me, ...remote, q: me.q || '', notifyRead: me.notifyRead || [] };
+        const merged = { ...me, ...remote, notifyRead: me.notifyRead || [] };
         setState(merged);
         window.setTimeout(() => toast('Sincronizado com a nuvem ✨'), 500);
       }
@@ -423,7 +422,6 @@ const delOrder = (id) => {
     notifications, notifyOpen, setNotifyOpen,
     newOrderOpen, setNewOrderOpen,
     markRead: (k) => set('notifyRead', (r) => (r.includes(k) ? r : [...r, k])),
-    q: state.q, setQ: (q) => set('q', q),
     zeroOperational,
     user, session, loginAs, logout, can,
   };
@@ -503,12 +501,10 @@ const Sidebar = ({ tab, go, unreadLate, open, onClose, onLogout }) => {
 
 /* ---------- topbar ---------- */
 const Topbar = ({ fold, onToggleFold }) => {
-  const { tab, theme, toggleTheme, notifications, notifyOpen, setNotifyOpen, markRead, state, q, setQ, go, clientById, setMenuOpen, user } = useLC();
-  const [sel, setSel] = React.useState(null);
+  const { tab, theme, toggleTheme, notifications, notifyOpen, setNotifyOpen, markRead, state, setMenuOpen, user } = useLC();
   const d = new Date(TODAY + 'T12:00:00');
   const dateTxt = `${MONTHS[d.getMonth()]} de ${d.getFullYear()}`;
   const unread = notifications.filter((n) => !(state.notifyRead || []).includes(n.key));
-  const suggest = q.trim().length > 0 || sel;
   return (
     <header className="topbar no-print">
       <div className="topbar-left">
@@ -518,34 +514,6 @@ const Topbar = ({ fold, onToggleFold }) => {
           {navTitle(tab)}
           <small>{dateTxt}</small>
         </div>
-      </div>
-      <div className="topbar-search">
-        <div className="search-box">
-          <Icon name="search" size={15} />
-          <input placeholder="Buscar pedido, cliente..." value={q} onChange={(e) => setQ(e.target.value)} onFocus={() => setSel(true)} onBlur={() => setTimeout(() => setSel(false), 150)} aria-label="Buscar pedido ou cliente" autoComplete="off" data-form-type="other" data-lpignore="true" spellCheck="false" autocapitalize="off" />
-        </div>
-        {suggest ? (
-          <div className="pop" style={{ right: 'auto', left: 0, top: 46, width: 380 }}>
-            <div className="small muted" style={{ padding: '6px 10px' }}>Clientes</div>
-            {state.clients.filter((c) => c.nome.toLowerCase().includes(q.toLowerCase())).slice(0, 3).map((c) => (
-              <div key={c.id} className="pop-item" onMouseDown={() => { setQ(''); go('clientes'); setTimeout(() => document.dispatchEvent(new CustomEvent('lc:openclient', { detail: { id: c.id } })), 300); }}>
-                <span className="badge teal"><Icon name="users" size={12} /> {c.nome}</span>
-                <span className="grow" /><span className="muted tiny">{c.cidade}</span>
-              </div>
-            ))}
-            <div className="small muted" style={{ padding: '6px 10px' }}>Pedidos</div>
-            {state.orders.filter((o) => o.id.toLowerCase().includes(q.toLowerCase()) || (o.cliente && clientName(o.cliente).toLowerCase().includes(q.toLowerCase()))).slice(0, 4).map((o) => (
-              <div key={o.id} className="pop-item" onMouseDown={() => { setQ(''); go('pedidos'); setTimeout(() => document.dispatchEvent(new CustomEvent('lc:openorder', { detail: { id: o.id } })), 300); }}>
-                <span className="pi-ico" style={{ background: 'var(--teal-soft)', color: 'var(--teal-dark)' }}><Icon name="orders" size={14} /></span>
-                <div><b>{o.id}</b><span>{o.cliente ? clientName(o.cliente) : ''} · {currency(o.total)}</span></div>
-                <StatusBadge status={o.status} />
-              </div>
-            ))}
-            {q && state.clients.filter((c) => c.nome.toLowerCase().includes(q.toLowerCase())).length === 0 && state.orders.filter((o) => o.id.toLowerCase().includes(q.toLowerCase())).length === 0 ? (
-              <div className="empty" style={{ padding: 14 }}>Nada encontrado para "{q}"</div>
-            ) : null}
-          </div>
-        ) : null}
       </div>
       <div className="topbar-right">
         <button className="icon-btn" onClick={toggleTheme} title="Alternar tema" aria-label="Alternar tema claro e escuro">
