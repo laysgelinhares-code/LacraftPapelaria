@@ -5,7 +5,6 @@
 const EstoqueView = () => {
   const { state, set, log, toast } = useLC();
   const [cat, setCat] = React.useState('all');
-  const [busca, setBusca] = React.useState('');
   const [form, setForm] = React.useState(null);
   const [move, setMove] = React.useState(null);
   const comprar = state.stock.filter((s) => s.qtd <= s.min);
@@ -13,7 +12,7 @@ const EstoqueView = () => {
 
   const list = state.stock.filter((s) =>
     (cat === 'all' || s.cat === cat) &&
-    (!busca || s.nome.toLowerCase().includes(busca.toLowerCase().trim()))
+    (!state.q || s.nome.toLowerCase().includes(state.q.toLowerCase().trim()))
   );
 
   const saveItem = (f) => {
@@ -46,7 +45,6 @@ const EstoqueView = () => {
   return (
     <div>
       <div className="flex gap10 wrap no-print mb12">
-        <SearchInput value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar insumo..." />
         <span className="grow" />
         <Btn variant="primary" onClick={() => setForm({})}><Icon name="plus" /> Novo insumo</Btn>
       </div>

@@ -80,13 +80,13 @@ const OrderCard = ({ o }) => {
 };
 
 /* ---------- kanban ---------- */
-const Kanban = ({ busca }) => {
+const Kanban = () => {
   const { state, saveOrder, log } = useLC();
   const [dragOver, setDragOver] = React.useState(null);
   return (
     <div className="kanban">
       {STATUSES.filter((st) => st.key !== 'entregue').map((st) => {
-        const cards = state.orders.filter((o) => o.status === st.key && (!busca || (o.id + clientName(o.cliente) + o.items.map((i) => prodName(i.p))).toLowerCase().includes(busca.toLowerCase().trim())));
+        const cards = state.orders.filter((o) => o.status === st.key && (!state.q || (o.id + clientName(o.cliente) + o.items.map((i) => prodName(i.p))).toLowerCase().includes(state.q.toLowerCase().trim())));
         return (
           <div key={st.key} className={`kcol ${dragOver === st.key ? 'drag' : ''}`}
             onDragOver={(e) => { e.preventDefault(); setDragOver(st.key); }}
@@ -375,7 +375,6 @@ const PedidosView = () => {
   const { state, newOrderOpen, setNewOrderOpen, delOrder } = useLC();
   const [openId, setOpenId] = React.useState(null);
   const [view, setView] = React.useState('kanban');
-  const [busca, setBusca] = React.useState('');
 
   React.useEffect(() => {
     const h = (e) => setOpenId(e.detail.id);
@@ -388,13 +387,11 @@ const PedidosView = () => {
   const atrasados = state.orders.filter((o) => o.status !== 'entregue' && o.prazo && o.prazo < TODAY).length;
   const prontos = state.orders.filter((o) => o.status === 'pronto').length;
   const finalizados = state.orders.filter((o) => o.status === 'entregue').sort((a, b) => ((b.finalizadoEm || b.prazo) > (a.finalizadoEm || a.prazo) ? 1 : -1));
-  const finalizadosF = finalizados.filter((o) => !busca || (o.id + ' ' + clientName(o.cliente) + ' ' + o.items.map((i) => prodName(i.p))).toLowerCase().includes(busca.toLowerCase().trim()));
+  const finalizadosF = finalizados.filter((o) => !state.q || (o.id + ' ' + clientName(o.cliente) + ' ' + o.items.map((i) => prodName(i.p))).toLowerCase().includes(state.q.toLowerCase().trim()));
 
   return (
     <div>
-      <div className="flex gap10 wrap mb12 no-print">
-        <SearchInput value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar pedido, cliente..." />
-        <span className="grow" />
+      <div className="flex gap10 wrap mb12 no-print" style={{ justifyContent: 'flex-end' }}>
         <span className="stat-pill"><Icon name="producao" /> Em produção: <b>{emProducao}</b></span>
         <span className="stat-pill"><Icon name="alert" style={{ color: 'var(--danger)' }} /> Atrasados: <b style={{ color: 'var(--danger)' }}>{atrasados}</b></span>
         <span className="stat-pill"><Icon name="truck" /> Prontos: <b>{prontos}</b></span>
@@ -412,7 +409,7 @@ const PedidosView = () => {
           <div className="alert-banner mb12 no-print" style={{ display: atrasados ? undefined : 'none' }}>
             <Icon name="alert" /> <b>{atrasados} pedido(s) atrasado(s)</b> — arraste para a frente da fila ou recombine o prazo com a cliente.
           </div>
-          <Kanban busca={busca} />
+          <Kanban />
         </>
       ) : (
         <div className="card">

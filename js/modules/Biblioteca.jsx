@@ -47,19 +47,17 @@ const BibliotecaView = () => {
   const [openId, setOpenId] = React.useState(null);
   const [form, setForm] = React.useState(null);
   const [catF, setCatF] = React.useState('all');
-  const [busca, setBusca] = React.useState('');
 
   const cats = ['all', ...new Set(state.arts.map((a) => a.cat))];
   const list = state.arts.filter((a) =>
     (catF === 'all' || a.cat === catF) &&
-    (!busca || (a.nome + ' ' + a.tags).toLowerCase().includes(busca.toLowerCase().trim()))
+    (!state.q || (a.nome + ' ' + a.tags).toLowerCase().includes(state.q.toLowerCase().trim()))
   );
   const open = state.arts.find((a) => a.id === openId);
 
   return (
     <div>
       <div className="flex gap10 wrap no-print mb12">
-        <SearchInput value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar arte, tag..." />
         <span className="grow" />
         <Btn variant="primary" onClick={() => setForm({})}><Icon name="plus" /> Adicionar arquivo</Btn>
       </div>

@@ -103,6 +103,7 @@ const SEED_STATE = () => ({
   printLog: [],
   cutLog: [],
   notifyRead: [],
+  q: '',
 });
 
 const LS_KEY = 'lacraft_os_state_v1';
@@ -283,7 +284,7 @@ const LaCraftOS = () => {
       if (Number(remote.updated) > Number((stateRef.current || {}).updated || 0)) {
         lastPullRef.current = Date.now();
         const me = stateRef.current || {};
-        const merged = { ...me, ...remote, notifyRead: me.notifyRead || [] };
+        const merged = { ...me, ...remote, q: me.q || '', notifyRead: me.notifyRead || [] };
         setState(merged);
         window.setTimeout(() => toast('Sincronizado com a nuvem ✨'), 500);
       }
@@ -422,6 +423,7 @@ const delOrder = (id) => {
     notifications, notifyOpen, setNotifyOpen,
     newOrderOpen, setNewOrderOpen,
     markRead: (k) => set('notifyRead', (r) => (r.includes(k) ? r : [...r, k])),
+    q: state.q, setQ: (q) => set('q', q),
     zeroOperational,
     user, session, loginAs, logout, can,
   };
@@ -500,11 +502,20 @@ const Sidebar = ({ tab, go, unreadLate, open, onClose, onLogout }) => {
 };
 
 /* ---------- topbar ---------- */
+const SEARCH_HINTS = {
+  pedidos: 'Buscar pedido, cliente ou produto...',
+  clientes: 'Buscar cliente...',
+  catalogo: 'Buscar produto...',
+  estoque: 'Buscar insumo...',
+  biblioteca: 'Buscar arte ou tag...',
+};
+
 const Topbar = ({ fold, onToggleFold }) => {
-  const { tab, theme, toggleTheme, notifications, notifyOpen, setNotifyOpen, markRead, state, setMenuOpen, user } = useLC();
+  const { tab, theme, toggleTheme, notifications, notifyOpen, setNotifyOpen, markRead, state, q, setQ, setMenuOpen, user } = useLC();
   const d = new Date(TODAY + 'T12:00:00');
   const dateTxt = `${MONTHS[d.getMonth()]} de ${d.getFullYear()}`;
   const unread = notifications.filter((n) => !(state.notifyRead || []).includes(n.key));
+  const hint = SEARCH_HINTS[tab];
   return (
     <header className="topbar no-print">
       <div className="topbar-left">
@@ -514,6 +525,14 @@ const Topbar = ({ fold, onToggleFold }) => {
           {navTitle(tab)}
           <small>{dateTxt}</small>
         </div>
+      </div>
+      <div className="topbar-search">
+        {hint ? (
+          <div className="search-box">
+            <Icon name="search" size={15} />
+            <input placeholder={hint} value={q} onChange={(e) => setQ(e.target.value)} aria-label={hint} autoComplete="off" data-form-type="other" data-lpignore="true" spellCheck="false" autocapitalize="off" />
+          </div>
+        ) : null}
       </div>
       <div className="topbar-right">
         <button className="icon-btn" onClick={toggleTheme} title="Alternar tema" aria-label="Alternar tema claro e escuro">
