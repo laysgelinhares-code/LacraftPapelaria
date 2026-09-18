@@ -80,31 +80,34 @@ const CatalystForm = ({ onSave, initial, onClose }) => {
           <Chip active={f.mode !== 'ficha'} onClick={() => setF({ ...f, mode: 'cv' })}>Manual</Chip>
           <Chip active={f.mode === 'ficha'} onClick={() => setF({ ...f, mode: 'ficha' })}>Ficha técnica (insumos)</Chip>
         </div>
-        {f.mode === 'ficha' ? (
-          <div>
-            {f.ficha.length === 0 ? <div className="muted small mb8">Selecione insumos do estoque — eles somam o custo variável e são descontados quando o produto for pedido.</div> : null}
-            {f.ficha.map((r, i) => {
-              const st = state.stock.find((x) => x.id === r.i);
-              return (
-                <div key={i} className="flex gap8 mb8" style={{ alignItems: 'center' }}>
-                  <Select value={r.i || ''} style={{ flex: 2 }} onChange={(e) => { const rr = [...f.ficha]; rr[i] = { i: e.target.value, q: rr[i].q }; setF({ ...f, ficha: rr }); }}>
-                    <option value="">— insumo —</option>
-                    {state.stock.map((s) => <option key={s.id} value={s.id}>{s.nome} ({currency(s.custo)}/{s.un})</option>)}
-                  </Select>
-                  <Input type="number" step="0.01" min={0} value={r.q} style={{ width: 80 }} onChange={(e) => { const rr = [...f.ficha]; rr[i] = { ...rr[i], q: e.target.value }; setF({ ...f, ficha: rr }); }} />
-                  <span className="muted tiny">{st ? currency((st.custo || 0) * n(r.q)) : '—'}</span>
-                  <Btn sm onClick={() => setF({ ...f, ficha: f.ficha.filter((_, k) => k !== i) })}><Icon name="trash" size={12} /></Btn>
-                </div>
-              );
-            })}
-            <Btn sm onClick={() => setF({ ...f, ficha: [...f.ficha, { i: '', q: 1 }] })}><Icon name="plus" size={13} /> Adicionar insumo</Btn>
-            <div className="flex mt12"><span className="muted small">Custo variável (soma dos insumos)</span><span className="grow" /><b>{currency(f.ficha.reduce((s, r) => s + ((state.stock.find((x) => x.id === r.i) || {}).custo || 0) * n(r.q), 0))}</b></div>
+        <div>
+          {f.ficha.length === 0 ? <div className="muted small mb8">Preencha os insumos que este produto consome — eles são descontados do estoque automaticamente quando o pedido é criado.</div> : null}
+          {f.ficha.map((r, i) => {
+            const st = state.stock.find((x) => x.id === r.i);
+            return (
+              <div key={i} className="flex gap8 mb8" style={{ alignItems: 'center' }}>
+                <Select value={r.i || ''} style={{ flex: 2 }} onChange={(e) => { const rr = [...f.ficha]; rr[i] = { i: e.target.value, q: rr[i].q }; setF({ ...f, ficha: rr }); }}>
+                  <option value="">— insumo —</option>
+                  {state.stock.map((s) => <option key={s.id} value={s.id}>{s.nome} ({currency(s.custo)}/{s.un})</option>)}
+                </Select>
+                <Input type="number" step="0.01" min={0} value={r.q} style={{ width: 80 }} onChange={(e) => { const rr = [...f.ficha]; rr[i] = { ...rr[i], q: e.target.value }; setF({ ...f, ficha: rr }); }} />
+                <span className="muted tiny">{st ? currency((st.custo || 0) * n(r.q)) : '—'}</span>
+                <Btn sm onClick={() => setF({ ...f, ficha: f.ficha.filter((_, k) => k !== i) })}><Icon name="trash" size={12} /></Btn>
+              </div>
+            );
+          })}
+          <Btn sm onClick={() => setF({ ...f, ficha: [...f.ficha, { i: '', q: 1 }] })}><Icon name="plus" size={13} /> Adicionar insumo</Btn>
+          {f.ficha.length ? (
+            <div className="flex mt12"><span className="muted small">Custo total dos insumos</span><span className="grow" /><b>{currency(f.ficha.reduce((s, r) => s + ((state.stock.find((x) => x.id === r.i) || {}).custo || 0) * n(r.q), 0))}</b></div>
+          ) : null}
+        </div>
+        {f.mode !== 'ficha' ? (
+          <div className="mt8">
+            <Field label="Custo variável por unidade (R$)" hint="alimenta o Orçamento Inteligente (quando não usar a soma dos insumos)">
+              <Input type="number" step="0.01" min={0} value={f.cv} onChange={(e) => setF({ ...f, cv: e.target.value })} />
+            </Field>
           </div>
-        ) : (
-          <Field label="Custo variável por unidade (R$)" hint="alimenta o Orçamento Inteligente">
-            <Input type="number" step="0.01" min={0} value={f.cv} onChange={(e) => setF({ ...f, cv: e.target.value })} />
-          </Field>
-        )}
+        ) : null}
       </div>
       <div className="mt8">
         <div className="art-tile" style={{ width: 170, height: 128, marginBottom: 8 }}>
